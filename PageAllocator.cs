@@ -55,24 +55,22 @@ namespace PageAllocator
         static void* FindBig(int size)
         {
             int thissize = int.MaxValue;
-            int addrbyte = -1;
             Descriptor descriptor = null;
-            for (int i = 0; i < DescriptorsCount; i++)
+            var keys = NotFullPages.Keys;
+            foreach (var key in keys)
             {
-                if (Descriptors[i].FreeBlocks > 0 && Descriptors[i].BlockSize >= size && Descriptors[i].BlockSize < thissize)
+                if (key >= size && key < thissize)
                 {
-                    thissize = Descriptors[i].BlockSize;
-                    descriptor = Descriptors[i];
-                    addrbyte = i * PageSize;
+                    thissize = key;
+                    descriptor = NotFullPages[key][0];
                 }
             }
             if (descriptor == null) return null;
             descriptor.FreeBlocks--;
-            NotFullPages[thissize].RemoveAt(NotFullPages[thissize].IndexOf(descriptor));
-            fixed (byte* addr = &Memory[addrbyte])
-            {
-                return addr;
-            }
+            byte* addr = descriptor.Byte;
+            descriptor.Byte = null;
+            NotFullPages[thissize].RemoveAt(0);
+            return addr;
         }
         static void* SmallAlloc(int size)
         {
